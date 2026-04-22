@@ -190,7 +190,7 @@ window.api.onDownloadFinished(({ id, success, exitCode, outPath }) => {
     if (success) {
         ui.bar.value = 100;
         ui.bar.className = 'item-progress primary-text';
-        ui.details.textContent = 'Completed';
+        ui.details.textContent = ui.fileSize ? `Completed — ${ui.fileSize}` : 'Completed';
         ui.stopBtn.className = 'stop-btn circle large no-margin primary';
         ui.stopIcon.textContent = 'delete_forever';
 
