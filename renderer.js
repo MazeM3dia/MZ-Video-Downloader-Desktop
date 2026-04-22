@@ -31,8 +31,9 @@ window.api.getAppVersion().then(v => {
 async function doFetch() {
     const url = urlEl.value.trim();
     if (!url) return;
-    fetchStatus.textContent = 'Searching...';
+    fetchStatus.textContent = '';
     fetchBtn.disabled = true;
+    fetchBtn.innerHTML = '<i>hourglass_empty</i><span>Fetching...</span>';
 
     try {
         const res = await window.api.fetchMetadata(url);
@@ -72,10 +73,19 @@ async function doFetch() {
         fetchStatus.textContent = '';
         downloadBtn.disabled = false;
     } catch (err) {
-        fetchStatus.textContent = 'Error fetching video';
+        const details = err?.details || '';
+        let msg = 'Error fetching video';
+        if (/private video/i.test(details)) msg = 'Video is private';
+        else if (/video unavailable/i.test(details)) msg = 'Video unavailable';
+        else if (/confirm your age/i.test(details)) msg = 'Age-restricted — sign in required';
+        else if (/not available in your country/i.test(details)) msg = 'Geo-blocked in your region';
+        else if (/unable to extract/i.test(details)) msg = 'Could not extract video info';
+        else if (/unsupported url/i.test(details)) msg = 'Unsupported URL';
+        fetchStatus.textContent = msg;
         console.error("Metadata fetch failed:", err);
     } finally {
         fetchBtn.disabled = false;
+        fetchBtn.innerHTML = 'Fetch Video';
     }
 }
 
@@ -100,7 +110,8 @@ pickLocationBtn.addEventListener('click', async () => {
 downloadBtn.addEventListener('click', async () => {
     const url = urlEl.value.trim();
     const fmt = document.querySelector('input[name="fmt"]:checked')?.value;
-    if (!url || !fmt) {
+    if (!url) return;
+    if (!fmt) {
         fetchStatus.textContent = 'Please select a format before downloading.';
         return;
     }
@@ -153,12 +164,14 @@ window.api.onYtOutput(({ id, text }) => {
         return;
     }
 
-    const m = text.match(/\[download\]\s+([0-9]{1,3}\.?[0-9]*)%(?:\s+of\s+[\S]+)?\s+at\s+([\S]+)\s+ETA\s+([\S]+)/i);
+    const m = text.match(/\[download\]\s+([0-9]{1,3}\.?[0-9]*)%(?:\s+of\s+([\S]+))?\s+at\s+([\S]+)\s+ETA\s+([\S]+)/i);
     if (m) {
         const p = parseFloat(m[1]);
         ui.bar.value = p;
         ui.percentText.textContent = p.toFixed(0) + '%';
-        ui.details.textContent = `${m[2]} — ETA ${m[3]}`;
+        if (m[2] && !ui.fileSize) ui.fileSize = m[2];
+        const sizeStr = ui.fileSize ? `${ui.fileSize} — ` : '';
+        ui.details.textContent = `${sizeStr}${m[3]} — ETA ${m[4]}`;
         return;
     }
     const mSimple = text.match(/\[download\]\s+([0-9]{1,3}\.?[0-9]*)%/i);
@@ -206,7 +219,7 @@ document.getElementById('newDownload').addEventListener('click', () => {
     metaContainer.classList.add('d-none');
     fetchStatus.textContent = '';
     currentMeta = null;
-    document.querySelectorAll('input[name="fmt"]').forEach(r => r.checked = false);
+    document.querySelector('input[name="fmt"][value="1080"]').checked = true;
     downloadBtn.disabled = true;
 });
 
