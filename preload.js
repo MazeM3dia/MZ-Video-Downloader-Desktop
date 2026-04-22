@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   readClipboard: () => ipcRenderer.invoke('read-clipboard'), // Add this
   downloadYtdlpUpdate: (url) => ipcRenderer.invoke('download-ytdlp-update', url),
+  openFolder: (filePath) => ipcRenderer.invoke('open-folder', filePath),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   onYtdlpUpdateAvailable: (cb) => {
     ipcRenderer.removeAllListeners('ytdlp-update-available');
     ipcRenderer.on('ytdlp-update-available', (ev, data) => cb(data));

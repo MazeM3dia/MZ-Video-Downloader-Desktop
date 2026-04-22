@@ -1,19 +1,17 @@
-const { app, BrowserWindow, ipcMain, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, clipboard, shell } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const https = require('https');
 
-console.log("Electron Version:", process.versions.electron);
+const { version: APP_VERSION } = require('./package.json');
 
-// Writable user data path for updated yt-dlp binary
 const USER_DATA_YTDLP = path.join(app.getPath('userData'), 'yt-dlp.exe');
 
 const BUNDLED_YTDLP = app.isPackaged
     ? path.join(process.resourcesPath, 'yt-dlp.exe')
     : path.join(__dirname, 'bin', 'yt-dlp.exe');
 
-// Always prefer user-updated binary over bundled
 function getYtdlpPath() {
     return fs.existsSync(USER_DATA_YTDLP) ? USER_DATA_YTDLP : BUNDLED_YTDLP;
 }
@@ -23,11 +21,15 @@ const FFMPEG_PATH = app.isPackaged
     : path.join(__dirname, 'bin', 'ffmpeg.exe');
 
 const activeProcesses = new Map(); // { id: { child, outPath } }
+const activeUrls = new Set();
 
 let mainWindow = null;
 
-ipcMain.handle('read-clipboard', () => {
-    return clipboard.readText();
+ipcMain.handle('read-clipboard', () => clipboard.readText());
+ipcMain.handle('get-app-version', () => APP_VERSION);
+
+ipcMain.handle('open-folder', async (event, filePath) => {
+    shell.showItemInFolder(filePath);
 });
 
 function createWindow() {
@@ -48,7 +50,6 @@ function createWindow() {
 
     mainWindow.loadFile('index.html');
 
-    // Check for yt-dlp update after window loads
     mainWindow.webContents.once('did-finish-load', () => {
         setTimeout(() => checkYtdlpUpdate(), 2000);
     });
@@ -96,23 +97,16 @@ function getLatestRelease() {
 
 async function checkYtdlpUpdate() {
     try {
-        console.log('[UpdateCheck] Starting...');
         const [current, latest] = await Promise.all([getCurrentVersion(), getLatestRelease()]);
-        console.log(`[UpdateCheck] Current: ${current}`);
-        console.log(`[UpdateCheck] Latest: ${latest.version}`);
-        console.log(`[UpdateCheck] Download URL: ${latest.downloadUrl}`);
         if (latest.version && current !== latest.version) {
-            console.log('[UpdateCheck] Update available — sending to renderer');
             mainWindow?.webContents.send('ytdlp-update-available', {
                 currentVersion: current,
                 latestVersion: latest.version,
                 downloadUrl: latest.downloadUrl
             });
-        } else {
-            console.log('[UpdateCheck] Already up to date');
         }
     } catch (e) {
-        console.error('[UpdateCheck] Failed:', e.message);
+        console.error('Update check failed:', e.message);
     }
 }
 
@@ -166,9 +160,7 @@ ipcMain.handle('download-ytdlp-update', async (event, downloadUrl) => {
 
 // 1. Folder Selection
 ipcMain.handle('select-folder', async () => {
-    const result = await dialog.showOpenDialog({
-        properties: ['openDirectory']
-    });
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     return result.canceled ? null : result.filePaths[0];
 });
 
@@ -205,8 +197,11 @@ ipcMain.handle('fetch-metadata', async (event, url) => {
 
 // 3. Download Logic with ffmpeg support
 ipcMain.handle('start-download', async (event, { url, formatTag, outputFilename, savePath }) => {
-    const downloadId = Date.now().toString();
+    if (activeUrls.has(url)) {
+        return { success: false, error: 'already-downloading' };
+    }
 
+    const downloadId = Date.now().toString();
     const baseDir = savePath || app.getPath('downloads');
     const outPath = path.join(baseDir, outputFilename);
 
@@ -226,29 +221,31 @@ ipcMain.handle('start-download', async (event, { url, formatTag, outputFilename,
     try {
         const child = spawn(getYtdlpPath(), args, { windowsHide: true });
         activeProcesses.set(downloadId, { child, outPath });
+        activeUrls.add(url);
 
         child.stdout.on('data', (d) => {
             event.sender.send('yt-output', { id: downloadId, text: d.toString() });
         });
 
         child.stderr.on('data', (d) => {
-            const errorText = d.toString();
-            console.error(`YT-DLP Error: ${errorText}`);
-            event.sender.send('yt-output', { id: downloadId, text: `ERROR: ${errorText}` });
+            event.sender.send('yt-output', { id: downloadId, text: `ERROR: ${d.toString()}` });
         });
 
         child.on('close', (code) => {
             activeProcesses.delete(downloadId);
+            activeUrls.delete(url);
             if (code !== 0) cleanPartFiles(outPath);
             event.sender.send('download-finished', {
                 id: downloadId,
                 success: code === 0,
-                exitCode: code
+                exitCode: code,
+                outPath
             });
         });
 
         return { success: true, id: downloadId };
     } catch (err) {
+        activeUrls.delete(url);
         return { success: false, error: err.message };
     }
 });

@@ -21,6 +21,12 @@ let currentMeta = null;
 
 downloadBtn.disabled = true;
 
+// Set version from package.json
+window.api.getAppVersion().then(v => {
+    document.querySelectorAll('.app-version').forEach(el => el.textContent = `MZ Video Downloader V${v}`);
+    document.title = `MZ Video Downloader V${v}`;
+});
+
 // --- FETCH METADATA ---
 async function doFetch() {
     const url = urlEl.value.trim();
@@ -128,6 +134,9 @@ downloadBtn.addEventListener('click', async () => {
     if (res.success) {
         activeUI.set(res.id, { bar, details, item, stopBtn, stopIcon, percentText });
         stopBtn.onclick = () => window.api.cancelDownload(res.id);
+    } else if (res.error === 'already-downloading') {
+        item.remove();
+        fetchStatus.textContent = 'This video is already downloading.';
     } else {
         details.textContent = 'Failed to start';
     }
@@ -161,17 +170,23 @@ window.api.onYtOutput(({ id, text }) => {
     }
 });
 
-window.api.onDownloadFinished(({ id, success, exitCode }) => {
+window.api.onDownloadFinished(({ id, success, exitCode, outPath }) => {
     const ui = activeUI.get(id);
     if (!ui) return;
 
-    
     if (success) {
         ui.bar.value = 100;
         ui.bar.className = 'item-progress primary-text';
         ui.details.textContent = 'Completed';
         ui.stopBtn.className = 'stop-btn circle large no-margin primary';
         ui.stopIcon.textContent = 'delete_forever';
+
+        const openBtn = document.createElement('button');
+        openBtn.className = 'small border no-margin';
+        openBtn.style.marginInlineStart = '0.5rem';
+        openBtn.innerHTML = '<i>folder_open</i><span>Show in folder</span>';
+        openBtn.onclick = () => window.api.openFolder(outPath);
+        ui.item.querySelector('.item-details').after(openBtn);
     } else {
         ui.bar.className = 'item-progress error-text';
         ui.details.textContent = exitCode === null ? 'Cancelled' : `Failed (exit code ${exitCode})`;
