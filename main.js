@@ -207,7 +207,7 @@ ipcMain.handle('start-download', async (event, { url, formatTag, outputFilename,
 
     let formatArg = (formatTag === 'audio')
         ? ['-f', 'bestaudio', '--extract-audio', '--audio-format', 'mp3']
-        : ['-f', `bestvideo[height<=${formatTag}]+bestaudio/best`, '--merge-output-format', 'mp4'];
+        : ['-f', `bestvideo[height<=${formatTag}]+bestaudio[ext=m4a]/bestvideo[height<=${formatTag}]+bestaudio/best`, '--merge-output-format', 'mp4'];
 
     const args = [
         ...formatArg,
