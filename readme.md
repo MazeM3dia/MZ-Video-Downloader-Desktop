@@ -13,6 +13,11 @@ A lightweight Electron desktop app for downloading videos from YouTube, Instagra
 - **Smart error messages** — identifies private, unavailable, age-restricted, and geo-blocked videos
 - **Clean UI** — built with BeerCSS (Material Design 3)
 
+## System Requirements
+
+- **OS:** Windows 10 / 11 (x64)
+- **No installation required** — single portable `.exe`
+
 ## Supported Sites
 
 YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and [1000+ more](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
