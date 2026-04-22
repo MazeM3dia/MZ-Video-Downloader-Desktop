@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, clipboard, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, clipboard, shell, Menu } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
@@ -33,6 +33,7 @@ ipcMain.handle('open-folder', async (event, filePath) => {
 });
 
 function createWindow() {
+    Menu.setApplicationMenu(null);
     mainWindow = new BrowserWindow({
         width: 1000,
         height: 850,
