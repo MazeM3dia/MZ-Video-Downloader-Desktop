@@ -15,15 +15,18 @@ const uploadDateEl = document.getElementById('uploadDate');
 const pickLocationBtn = document.getElementById('pickLocation');
 const locationPathEl = document.getElementById('locationPath');
 
-let customDownloadPath = null; 
+let customDownloadPath = null;
 const activeUI = new Map();
 let currentMeta = null;
 
+downloadBtn.disabled = true;
+
 // --- FETCH METADATA ---
-fetchBtn.addEventListener('click', async () => {
+async function doFetch() {
     const url = urlEl.value.trim();
     if (!url) return;
     fetchStatus.textContent = 'Searching...';
+    fetchBtn.disabled = true;
 
     try {
         const res = await window.api.fetchMetadata(url);
@@ -40,7 +43,7 @@ fetchBtn.addEventListener('click', async () => {
             const h = Math.floor(totalSec / 3600);
             const m = Math.floor((totalSec % 3600) / 60);
             const s = String(totalSec % 60).padStart(2, '0');
-            durationEl.textContent = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${s}` : `${m}:${s}`;
+            durationEl.textContent = `Duration: ${h > 0 ? `${h}:${String(m).padStart(2,'0')}:${s}` : `${m}:${s}`}`;
         } else {
             durationEl.textContent = '';
         }
@@ -61,11 +64,17 @@ fetchBtn.addEventListener('click', async () => {
         
         metaContainer.classList.remove('d-none');
         fetchStatus.textContent = '';
+        downloadBtn.disabled = false;
     } catch (err) {
         fetchStatus.textContent = 'Error fetching video';
         console.error("Metadata fetch failed:", err);
+    } finally {
+        fetchBtn.disabled = false;
     }
-});
+}
+
+fetchBtn.addEventListener('click', doFetch);
+urlEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') doFetch(); });
 
 // --- PICK FOLDER ---
 pickLocationBtn.addEventListener('click', async () => {
@@ -181,6 +190,9 @@ document.getElementById('newDownload').addEventListener('click', () => {
     filenameEl.value = '';
     metaContainer.classList.add('d-none');
     fetchStatus.textContent = '';
+    currentMeta = null;
+    document.querySelectorAll('input[name="fmt"]').forEach(r => r.checked = false);
+    downloadBtn.disabled = true;
 });
 
 // --- YT-DLP AUTO UPDATE ---
