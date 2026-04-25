@@ -1,6 +1,6 @@
 {
     "name": "youtube-video-downloader",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "main": "main.js",
     "description": "A tool for downloading and saving videos from Internet, locally download w. Right on your Desktop app.",
     "author": "MZMD",

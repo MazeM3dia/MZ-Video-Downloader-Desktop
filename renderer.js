@@ -223,46 +223,6 @@ document.getElementById('newDownload').addEventListener('click', () => {
     downloadBtn.disabled = true;
 });
 
-// --- YT-DLP AUTO UPDATE ---
-const updateBanner = document.getElementById('updateBanner');
-updateBanner.style.display = 'none';
-const updateBannerText = document.getElementById('updateBannerText');
-const updateBannerBtn = document.getElementById('updateBannerBtn');
-const updateBannerDismiss = document.getElementById('updateBannerDismiss');
-let pendingDownloadUrl = null;
-
-window.api.onYtdlpUpdateAvailable(({ currentVersion, latestVersion, downloadUrl }) => {
-    pendingDownloadUrl = downloadUrl;
-    updateBannerText.textContent = `yt-dlp update available: ${currentVersion} → ${latestVersion}`;
-    updateBanner.style.display = 'block';
-});
-
-updateBannerDismiss.addEventListener('click', () => {
-    updateBanner.style.display = 'none';
-});
-
-updateBannerBtn.addEventListener('click', async () => {
-    if (!pendingDownloadUrl) return;
-    updateBannerBtn.disabled = true;
-    updateBannerDismiss.disabled = true;
-    updateBannerText.textContent = 'Downloading update... 0%';
-
-    window.api.onYtdlpDownloadProgress((pct) => {
-        updateBannerText.textContent = `Downloading update... ${pct}%`;
-    });
-
-    const res = await window.api.downloadYtdlpUpdate(pendingDownloadUrl);
-    updateBannerBtn.disabled = false;
-    updateBannerDismiss.disabled = false;
-
-    if (res.success) {
-        updateBannerText.textContent = 'yt-dlp updated successfully. Restart the app to use the new version.';
-        updateBannerBtn.style.display = 'none';
-    } else {
-        updateBannerText.textContent = `Update failed: ${res.error}`;
-    }
-});
-
 urlEl.addEventListener('focus', async () => {
     if (urlEl.value.trim()) return;
     try {

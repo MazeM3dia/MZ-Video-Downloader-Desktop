@@ -2,23 +2,16 @@ const { app, BrowserWindow, ipcMain, dialog, clipboard, shell, Menu } = require(
 const path = require('path');
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
-const https = require('https');
 
 const { version: APP_VERSION } = require('./package.json');
 
-const USER_DATA_YTDLP = path.join(app.getPath('userData'), 'yt-dlp.exe');
-
-const BUNDLED_YTDLP = app.isPackaged
-    ? path.join(process.resourcesPath, 'yt-dlp.exe')
-    : path.join(__dirname, 'bin', 'yt-dlp.exe');
+let USER_DATA_YTDLP;
+let BUNDLED_YTDLP;
+let FFMPEG_PATH;
 
 function getYtdlpPath() {
     return fs.existsSync(USER_DATA_YTDLP) ? USER_DATA_YTDLP : BUNDLED_YTDLP;
 }
-
-const FFMPEG_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'ffmpeg.exe')
-    : path.join(__dirname, 'bin', 'ffmpeg.exe');
 
 const activeProcesses = new Map(); // { id: { child, outPath } }
 const activeUrls = new Set();
@@ -50,111 +43,18 @@ function createWindow() {
     }
 
     mainWindow.loadFile('index.html');
-
-    mainWindow.webContents.once('did-finish-load', () => {
-        setTimeout(() => checkYtdlpUpdate(), 2000);
-    });
+    mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-app.whenReady().then(createWindow);
-
-// --- YT-DLP UPDATE CHECK ---
-
-function getCurrentVersion() {
-    return new Promise((resolve) => {
-        const child = spawn(getYtdlpPath(), ['--version'], { windowsHide: true });
-        let out = '';
-        child.stdout.on('data', (d) => { out += d.toString(); });
-        child.on('close', () => resolve(out.trim()));
-        child.on('error', () => resolve('unknown'));
-    });
-}
-
-function getLatestRelease() {
-    return new Promise((resolve, reject) => {
-        const options = {
-            hostname: 'api.github.com',
-            path: '/repos/yt-dlp/yt-dlp/releases/latest',
-            headers: { 'User-Agent': 'MZ-Video-Downloader' }
-        };
-        https.get(options, (res) => {
-            let data = '';
-            res.on('data', (d) => { data += d; });
-            res.on('end', () => {
-                try {
-                    const json = JSON.parse(data);
-                    const asset = json.assets?.find(a => a.name === 'yt-dlp.exe');
-                    resolve({
-                        version: json.tag_name,
-                        downloadUrl: asset?.browser_download_url || null
-                    });
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        }).on('error', reject);
-    });
-}
-
-async function checkYtdlpUpdate() {
-    try {
-        const [current, latest] = await Promise.all([getCurrentVersion(), getLatestRelease()]);
-        if (latest.version && current !== latest.version) {
-            mainWindow?.webContents.send('ytdlp-update-available', {
-                currentVersion: current,
-                latestVersion: latest.version,
-                downloadUrl: latest.downloadUrl
-            });
-        }
-    } catch (e) {
-        console.error('Update check failed:', e.message);
-    }
-}
-
-ipcMain.handle('download-ytdlp-update', async (event, downloadUrl) => {
-    return new Promise((resolve) => {
-        const tmpPath = USER_DATA_YTDLP + '.tmp';
-        const file = fs.createWriteStream(tmpPath);
-
-        const doRequest = (url, redirectCount = 0) => {
-            if (redirectCount > 5) {
-                resolve({ success: false, error: 'Too many redirects' });
-                return;
-            }
-            https.get(url, { headers: { 'User-Agent': 'MZ-Video-Downloader' } }, (res) => {
-                if (res.statusCode === 302 || res.statusCode === 301) {
-                    doRequest(res.headers.location, redirectCount + 1);
-                    return;
-                }
-                const total = parseInt(res.headers['content-length'] || '0', 10);
-                let received = 0;
-                res.on('data', (chunk) => {
-                    received += chunk.length;
-                    if (total) {
-                        const pct = Math.round((received / total) * 100);
-                        event.sender.send('ytdlp-download-progress', pct);
-                    }
-                });
-                res.pipe(file);
-                file.on('finish', () => {
-                    file.close(() => {
-                        try {
-                            if (fs.existsSync(USER_DATA_YTDLP)) fs.unlinkSync(USER_DATA_YTDLP);
-                            fs.renameSync(tmpPath, USER_DATA_YTDLP);
-                            resolve({ success: true });
-                        } catch (e) {
-                            resolve({ success: false, error: e.message });
-                        }
-                    });
-                });
-            }).on('error', (e) => {
-                fs.unlink(tmpPath, () => {});
-                resolve({ success: false, error: e.message });
-            });
-        };
-
-        doRequest(downloadUrl);
-    });
+app.whenReady().then(() => {
+    USER_DATA_YTDLP = path.join(app.getPath('userData'), 'yt-dlp.exe');
+    BUNDLED_YTDLP = app.isPackaged
+        ? path.join(process.resourcesPath, 'yt-dlp.exe')
+        : path.join(__dirname, 'bin', 'yt-dlp.exe');
+    FFMPEG_PATH = app.isPackaged
+        ? path.join(process.resourcesPath, 'ffmpeg.exe')
+        : path.join(__dirname, 'bin', 'ffmpeg.exe');
+    createWindow();
 });
 
 // --- HANDLERS ---
@@ -210,12 +110,15 @@ ipcMain.handle('start-download', async (event, { url, formatTag, outputFilename,
         ? ['-f', 'bestaudio', '--extract-audio', '--audio-format', 'mp3']
         : ['-f', `bestvideo[height<=${formatTag}]+bestaudio[ext=m4a]/bestvideo[height<=${formatTag}]+bestaudio/best`, '--merge-output-format', 'mp4'];
 
+    // yt-dlp appends .mp3 itself when using --extract-audio, so strip it from the -o path
+    const ytdlpOutPath = (formatTag === 'audio') ? outPath.replace(/\.mp3$/, '') : outPath;
+
     const args = [
         ...formatArg,
         '--ffmpeg-location', FFMPEG_PATH,
         '--newline',
         '--no-playlist',
-        '-o', outPath,
+        '-o', ytdlpOutPath,
         url
     ];
 
