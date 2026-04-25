@@ -9,7 +9,6 @@ A lightweight Electron desktop app for downloading videos from YouTube, Instagra
 - **Real-time progress** — speed, ETA, and file size shown during download
 - **Custom save location** — pick any folder per session
 - **Auto-paste URL** — clipboard URL is pasted automatically on focus
-- **yt-dlp auto-update** — notified on startup if a newer yt-dlp is available; updates in-place without reinstalling the app
 - **Smart error messages** — identifies private, unavailable, age-restricted, and geo-blocked videos
 - **Clean UI** — built with BeerCSS (Material Design 3)
 
@@ -39,15 +38,20 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 | "Age-restricted" | Platform requires sign-in | Not supported |
 | "Geo-blocked" | Not available in your region | Use a VPN |
 | Audio won't play on Windows | Opus codec not supported by Windows Media Player | Download again — app now prefers AAC |
-| Download fails | yt-dlp outdated | Use the update banner to update yt-dlp |
+| Download fails | yt-dlp outdated | Replace `yt-dlp.exe` in the app's bin folder with the latest from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) |
 
 ## Changelog
+
+**V0.2.0**
+- Removed yt-dlp auto-update feature
+- Fixed startup crash on Electron 40
+- Fixed audio downloads producing double extension (`.mp3.mp3`)
+- System font fallback (Arial / system-ui) for consistent UI across machines
 
 **V0.1.0**
 - Initial release
 - Multi-format video/audio download via yt-dlp + ffmpeg
 - Real-time progress with speed, ETA, and file size
-- yt-dlp auto-update notification (downloads to AppData, no reinstall needed)
 - Smart error messages for private/unavailable/geo-blocked videos
 - Auto-paste URL from clipboard on focus
 - Open downloaded file location from UI
