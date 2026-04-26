@@ -2,6 +2,13 @@
 
 A lightweight Electron desktop app for downloading videos from YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and [1000+ more sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) — powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and ffmpeg.
 
+## Screenshots
+
+![Main screen](images/image-1.png)
+![Fetch video](images/image-2.png)
+![Downloading](images/image-3.png)
+![Completed](images/image-4.png)
+
 ## Features
 
 - **Multi-format downloads** — 1080p, 720p, 480p, 360p video (MP4) or MP3 audio
@@ -29,6 +36,7 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 4. **Select Location** — (optional) click **Download Location** to change save folder
 5. **Download** — click **Start Download**; progress, speed, and ETA update in real time
 6. **Open File** — click **Show in folder** once download completes
+7. **New Download** — click **New Download** (top right) to download another video
 
 ## Troubleshooting
 
