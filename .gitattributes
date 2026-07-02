@@ -1,0 +1,5 @@
+* text=auto
+*.exe binary
+*.woff2 binary
+*.ico binary
+*.png binary

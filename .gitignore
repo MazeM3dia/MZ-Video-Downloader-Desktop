@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+target/
+src-tauri/target/
+
+# Local binaries (users download separately)
+bin/*.exe
+
+# Logs
+npm-debug.log*
