@@ -8,5 +8,8 @@ src-tauri/target/
 # Local binaries (users download separately)
 bin/*.exe
 
+# Claude internal config
+.claude/
+
 # Logs
 npm-debug.log*
