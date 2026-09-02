@@ -4,6 +4,13 @@
 
 A lightweight desktop app for downloading videos from YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and [1000+ more sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) — powered by [yt-dlp](https://github.com/yt-dlp/yt-dlp) and ffmpeg.
 
+> NOTE: The downloaded .zip contains a few files and folders:
+
+* **MZ Video Downloader.exe** — the app itself, click to open.
+* **bin/** — folder with `ffmpeg.exe` and `yt-dlp.exe`.
+
+If downloads start failing (yt-dlp errors, "unsupported URL", etc.), download the latest [yt-dlp.exe](https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe) and replace the one inside the **bin** folder.
+
 ## Screenshots
 
 ![Main screen](images/image-1.png)
@@ -43,13 +50,13 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 
 ## Troubleshooting
 
-| Problem                     | Cause                                            | Fix                                                                                                                          |
-| --------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| "Video is private"          | Video requires login                             | Use a public video                                                                                                           |
-| "Age-restricted"            | Platform requires sign-in                        | Not supported                                                                                                                |
-| "Geo-blocked"               | Not available in your region                     | Use a VPN                                                                                                                    |
-| Audio won't play on Windows | Opus codec not supported by Windows Media Player | Download again — app now prefers AAC                                                                                        |
-| Download fails              | yt-dlp outdated                                  | Replace`yt-dlp.exe` in the app's bin folder with the latest from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases) |
+| Problem                     | Cause                                            | Fix                                                                                                                                                       |
+| --------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Video is private"          | Video requires login                             | Use a public video                                                                                                                                        |
+| "Age-restricted"            | Platform requires sign-in                        | Not supported                                                                                                                                             |
+| "Geo-blocked"               | Not available in your region                     | Use a VPN                                                                                                                                                 |
+| Audio won't play on Windows | Opus codec not supported by Windows Media Player | Download again — app now prefers AAC                                                                                                                     |
+| Download fails              | yt-dlp outdated                                  | Update `yt-dlp.exe` in the bin folder — see note above                                                                                                    |
 
 ## Changelog
 
