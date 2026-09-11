@@ -60,6 +60,11 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 
 ## Changelog
 
+**v0.4.0** — 2026-09-11
+
+- Auto-detects YouTube Music tracks and switches to MP3 audio automatically
+- MP3 downloads now embed metadata (title, artist, album, release year) and cover art
+
 **v0.3.0** — 2026-07-02
 
 - Migrated from Electron to Tauri v2 — significantly smaller portable package

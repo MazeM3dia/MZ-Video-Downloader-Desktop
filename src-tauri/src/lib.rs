@@ -44,15 +44,26 @@ struct StartDownloadArgs {
     output_filename: String,
     #[serde(rename = "savePath")]
     save_path: Option<String>,
+    #[serde(rename = "isMusic", default)]
+    is_music: bool,
 }
 
 // ── Helpers ───────────────────────────────────────────────────
 fn get_bin_path<R: Runtime>(_app: &AppHandle<R>, name: &str) -> PathBuf {
     if cfg!(debug_assertions) {
-        let mut p = std::env::current_dir().unwrap_or_default();
-        p.push("bin");
-        p.push(format!("{}.exe", name));
-        p
+        // `tauri dev` runs cargo with cwd = src-tauri/, so walk up to find
+        // the repo-root bin/ folder instead of assuming cwd is the root.
+        let mut dir = std::env::current_dir().unwrap_or_default();
+        loop {
+            let candidate = dir.join("bin").join(format!("{}.exe", name));
+            if candidate.exists() {
+                return candidate;
+            }
+            if !dir.pop() {
+                break;
+            }
+        }
+        PathBuf::from("bin").join(format!("{}.exe", name))
     } else {
         // Look in bin/ subfolder beside the exe for portable layout
         let exe_dir = std::env::current_exe()
@@ -148,7 +159,22 @@ async fn start_download<R: Runtime>(
             "-f".into(), "bestaudio".into(),
             "--extract-audio".into(),
             "--audio-format".into(), "mp3".into(),
+            "--audio-quality".into(), "0".into(),
+            "--embed-metadata".into(),
+            "--embed-thumbnail".into(),
         ]
+        .into_iter()
+        .chain(if args.is_music {
+            vec![
+                "--ppa".into(),
+                "ThumbnailsConvertor:-vf crop='min(iw\\,ih)':'min(iw\\,ih)'".into(),
+                "--parse-metadata".into(),
+                "release_year:(?P<meta_date>.+)".into(),
+            ]
+        } else {
+            vec![]
+        })
+        .collect()
     } else {
         vec![
             "-f".into(),
