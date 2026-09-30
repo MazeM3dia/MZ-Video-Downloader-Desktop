@@ -1,6 +1,6 @@
 [package]
 name = "mz-video-downloader"
-version = "0.4.0"
+version = "0.5.0"
 description = "MZ Video Downloader"
 authors = ["MZMD"]
 edition = "2021"

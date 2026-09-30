@@ -2,6 +2,7 @@
 (function () {
     const { invoke } = window.__TAURI__.core;
     const { listen } = window.__TAURI__.event;
+    const { getCurrentWindow } = window.__TAURI__.window;
 
     let ytOutputUnlisten = null;
     let downloadFinishedUnlisten = null;
@@ -13,6 +14,7 @@
 
     window.api = {
         fetchMetadata: (url) => wrapErr(invoke('fetch_metadata', { url })),
+        fetchPlaylist: (url) => wrapErr(invoke('fetch_playlist', { url })),
         startDownload: (opts) => wrapErr(invoke('start_download', { args: opts })),
         cancelDownload: (id) => invoke('cancel_download', { id }),
         selectFolder: () => invoke('select_folder'),
@@ -21,6 +23,8 @@
         openFile: (path) => invoke('open_file', { path }),
         deleteFile: (path) => invoke('delete_file', { path }),
         getAppVersion: () => invoke('get_app_version'),
+        minimizeWindow: () => getCurrentWindow().minimize(),
+        closeWindow: () => getCurrentWindow().close(),
 
         onYtOutput: (cb) => {
             if (ytOutputUnlisten) ytOutputUnlisten();

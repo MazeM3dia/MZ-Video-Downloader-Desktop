@@ -60,6 +60,11 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 
 ## Changelog
 
+**v0.5.0** — 2026-09-30
+
+- Paste a YouTube/YT Music playlist or album link to pick and bulk-download multiple tracks at once
+- Custom title bar with minimize/close controls
+
 **v0.4.0** — 2026-09-11
 
 - Auto-detects YouTube Music tracks and switches to MP3 audio automatically

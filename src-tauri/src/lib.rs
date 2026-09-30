@@ -129,6 +129,30 @@ async fn fetch_metadata(app: AppHandle, url: String) -> Result<serde_json::Value
 }
 
 #[tauri::command]
+async fn fetch_playlist(app: AppHandle, url: String) -> Result<serde_json::Value, String> {
+    let ytdlp = get_bin_path(&app, "yt-dlp");
+
+    let mut cmd = tokio::process::Command::new(&ytdlp);
+    cmd.args(["--flat-playlist", "-J", "--no-warnings", &url])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let output = cmd.output().await
+        .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
+
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        serde_json::from_str(&stdout)
+            .map_err(|e| format!("Parse error: {}", e))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        Err(stderr)
+    }
+}
+
+#[tauri::command]
 async fn start_download<R: Runtime>(
     app: AppHandle<R>,
     state: tauri::State<'_, State>,
@@ -367,6 +391,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             fetch_metadata,
+            fetch_playlist,
             start_download,
             cancel_download,
             open_folder,
