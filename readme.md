@@ -9,7 +9,9 @@ A lightweight desktop app for downloading videos from YouTube, Instagram, TikTok
 * **MZ Video Downloader.exe** — the app itself, click to open.
 * **bin/** — folder with `ffmpeg.exe` and `yt-dlp.exe`.
 
-If downloads start failing (yt-dlp errors, "unsupported URL", etc.), download the latest [yt-dlp.exe](https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe) and replace the one inside the **bin** folder.
+If downloads start failing (yt-dlp errors, "unsupported URL", etc.), download the latest [yt-dlp.exe](https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe) and replace the one inside the **bin** folder — or just let the app's built-in update checker handle it.
+
+📖 **[Full documentation](docs/README.md)** — tutorials, how-to guides, technical reference, and design explanations.
 
 ## Screenshots
 
