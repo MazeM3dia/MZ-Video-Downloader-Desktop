@@ -60,6 +60,10 @@ YouTube, Instagram, TikTok, Twitter/X, Facebook, Twitch, SoundCloud, Vimeo, and 
 
 ## Changelog
 
+**v0.6.0** — 2026-10-26
+
+- Checks for yt-dlp updates on startup and offers a one-click update, downloaded in the background with no restart needed
+
 **v0.5.0** — 2026-09-30
 
 - Paste a YouTube/YT Music playlist or album link to pick and bulk-download multiple tracks at once

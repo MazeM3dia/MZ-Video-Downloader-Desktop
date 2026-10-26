@@ -32,6 +32,12 @@ const titlebarClose    = document.getElementById('titlebarClose');
 titlebarMinimize.addEventListener('click', () => window.api.minimizeWindow());
 titlebarClose.addEventListener('click', () => window.api.closeWindow());
 
+// Update banner
+const updateBanner       = document.getElementById('updateBanner');
+const updateBannerText   = document.getElementById('updateBannerText');
+const updateBannerBtn    = document.getElementById('updateBannerBtn');
+const updateBannerDismiss = document.getElementById('updateBannerDismiss');
+
 // Playlist modal
 const playlistModal         = document.getElementById('playlistModal');
 const playlistModalTitle    = document.getElementById('playlistModalTitle');
@@ -184,6 +190,39 @@ window.api.getAppVersion().then(v => {
         el.textContent = `MZ Video Downloader V${v}`;
     });
     document.title = `MZ Video Downloader V${v}`;
+});
+
+// ── yt-dlp update check ─────────────────────────────────────────
+window.api.checkYtdlpUpdate().then(info => {
+    if (!info?.updateAvailable) return;
+    updateBannerText.textContent = `yt-dlp update available: ${info.current || 'unknown'} → ${info.latest}`;
+    updateBanner.dataset.downloadUrl = info.downloadUrl;
+    updateBanner.style.display = 'flex';
+}).catch(() => {});
+
+updateBannerDismiss.addEventListener('click', () => { updateBanner.style.display = 'none'; });
+
+updateBannerBtn.addEventListener('click', async () => {
+    const url = updateBanner.dataset.downloadUrl;
+    if (!url) return;
+
+    updateBannerBtn.disabled = true;
+    updateBannerDismiss.style.display = 'none';
+    updateBannerText.textContent = 'Downloading update… 0%';
+
+    window.api.onYtdlpUpdateProgress(pct => {
+        updateBannerText.textContent = `Downloading update… ${pct}%`;
+    });
+
+    try {
+        await window.api.downloadYtdlpUpdate(url);
+        updateBannerText.textContent = 'yt-dlp updated — no restart needed';
+        setTimeout(() => { updateBanner.style.display = 'none'; }, 3000);
+    } catch (_) {
+        updateBannerText.textContent = 'Update failed — try again later';
+        updateBannerBtn.disabled = false;
+        updateBannerDismiss.style.display = '';
+    }
 });
 
 // ── Auto-paste on focus ───────────────────────────────────────

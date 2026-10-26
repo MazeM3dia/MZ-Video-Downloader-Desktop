@@ -127,6 +127,21 @@ a:hover { opacity: 1; }
     color:          var(--foreground);
 }
 
+.update-banner {
+    flex-shrink:   0;
+    display:       flex;
+    align-items:   center;
+    gap:           0.6rem;
+    padding:       0.5rem 1.25rem;
+    background:    var(--accent);
+    border-bottom: 1px solid var(--border);
+}
+
+.update-banner-text {
+    font-size: 0.8rem;
+    color:     var(--accent-foreground);
+}
+
 .titlebar-controls {
     display:     flex;
     align-items: center;

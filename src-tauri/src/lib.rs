@@ -74,6 +74,21 @@ fn get_bin_path<R: Runtime>(_app: &AppHandle<R>, name: &str) -> PathBuf {
     }
 }
 
+// A user-downloaded yt-dlp.exe lives in the app's data dir (always writable,
+// unlike the installed bin/ folder) and takes priority over the bundled one.
+fn get_ytdlp_override_path<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
+    app.path().app_local_data_dir().ok().map(|d| d.join("yt-dlp.exe"))
+}
+
+fn get_ytdlp_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+    if let Some(override_path) = get_ytdlp_override_path(app) {
+        if override_path.exists() {
+            return override_path;
+        }
+    }
+    get_bin_path(app, "yt-dlp")
+}
+
 fn unique_id() -> String {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -105,7 +120,7 @@ fn get_app_version(app: AppHandle) -> String {
 
 #[tauri::command]
 async fn fetch_metadata(app: AppHandle, url: String) -> Result<serde_json::Value, String> {
-    let ytdlp = get_bin_path(&app, "yt-dlp");
+    let ytdlp = get_ytdlp_path(&app);
 
     let mut cmd = tokio::process::Command::new(&ytdlp);
     cmd.args(["-j", "--no-playlist", &url])
@@ -130,7 +145,7 @@ async fn fetch_metadata(app: AppHandle, url: String) -> Result<serde_json::Value
 
 #[tauri::command]
 async fn fetch_playlist(app: AppHandle, url: String) -> Result<serde_json::Value, String> {
-    let ytdlp = get_bin_path(&app, "yt-dlp");
+    let ytdlp = get_ytdlp_path(&app);
 
     let mut cmd = tokio::process::Command::new(&ytdlp);
     cmd.args(["--flat-playlist", "-J", "--no-warnings", &url])
@@ -153,6 +168,85 @@ async fn fetch_playlist(app: AppHandle, url: String) -> Result<serde_json::Value
 }
 
 #[tauri::command]
+async fn check_ytdlp_update(app: AppHandle) -> Result<serde_json::Value, String> {
+    let ytdlp = get_ytdlp_path(&app);
+
+    let mut cmd = tokio::process::Command::new(&ytdlp);
+    cmd.arg("--version").stdout(Stdio::piped()).stderr(Stdio::piped());
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+    let output = cmd.output().await
+        .map_err(|e| format!("Failed to spawn yt-dlp: {}", e))?;
+    let current = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    let client = reqwest::Client::builder()
+        .user_agent("MZ-Video-Downloader")
+        .build()
+        .map_err(|e| e.to_string())?;
+    let release: serde_json::Value = client
+        .get("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
+        .send().await.map_err(|e| e.to_string())?
+        .json().await.map_err(|e| e.to_string())?;
+
+    let latest = release.get("tag_name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let download_url = release.get("assets")
+        .and_then(|a| a.as_array())
+        .and_then(|arr| arr.iter().find(|a| a.get("name").and_then(|n| n.as_str()) == Some("yt-dlp.exe")))
+        .and_then(|a| a.get("browser_download_url"))
+        .and_then(|u| u.as_str())
+        .map(String::from);
+
+    let update_available = !latest.is_empty() && latest != current && download_url.is_some();
+
+    Ok(serde_json::json!({
+        "current": current,
+        "latest": latest,
+        "downloadUrl": download_url,
+        "updateAvailable": update_available,
+    }))
+}
+
+#[tauri::command]
+async fn download_ytdlp_update(app: AppHandle, url: String) -> Result<(), String> {
+    use futures_util::StreamExt;
+
+    let override_path = get_ytdlp_override_path(&app)
+        .ok_or_else(|| "Could not resolve app data directory".to_string())?;
+    let tmp_path = override_path.with_extension("exe.tmp");
+
+    if let Some(dir) = override_path.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("MZ-Video-Downloader")
+        .build()
+        .map_err(|e| e.to_string())?;
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let total = response.content_length().unwrap_or(0);
+    let mut received: u64 = 0;
+
+    let mut file = tokio::fs::File::create(&tmp_path).await
+        .map_err(|e| e.to_string())?;
+    let mut stream = response.bytes_stream();
+
+    use tokio::io::AsyncWriteExt;
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
+        received += chunk.len() as u64;
+        if total > 0 {
+            let pct = (received as f64 / total as f64 * 100.0) as u32;
+            let _ = app.emit("ytdlp-update-progress", pct);
+        }
+    }
+    drop(file);
+
+    std::fs::rename(&tmp_path, &override_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn start_download<R: Runtime>(
     app: AppHandle<R>,
     state: tauri::State<'_, State>,
@@ -167,7 +261,7 @@ async fn start_download<R: Runtime>(
     }
 
     let download_id = unique_id();
-    let ytdlp  = get_bin_path(&app, "yt-dlp");
+    let ytdlp  = get_ytdlp_path(&app);
     let ffmpeg = get_bin_path(&app, "ffmpeg");
 
     let base_dir = args.save_path.clone().unwrap_or_else(|| {
@@ -392,6 +486,8 @@ pub fn run() {
             get_app_version,
             fetch_metadata,
             fetch_playlist,
+            check_ytdlp_update,
+            download_ytdlp_update,
             start_download,
             cancel_download,
             open_folder,

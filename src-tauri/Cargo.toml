@@ -1,6 +1,6 @@
 [package]
 name = "mz-video-downloader"
-version = "0.5.0"
+version = "0.6.0"
 description = "MZ Video Downloader"
 authors = ["MZMD"]
 edition = "2021"
@@ -24,3 +24,5 @@ serde_json     = "1"
 tokio          = { version = "1", features = ["full"] }
 log            = "0.4"
 tauri-plugin-log = "2"
+reqwest        = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+futures-util   = "0.3"

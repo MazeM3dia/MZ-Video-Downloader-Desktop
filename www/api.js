@@ -6,6 +6,7 @@
 
     let ytOutputUnlisten = null;
     let downloadFinishedUnlisten = null;
+    let ytdlpUpdateProgressUnlisten = null;
 
     // Tauri rejects with a raw string; renderer expects { details } shape
     function wrapErr(p) {
@@ -25,6 +26,8 @@
         getAppVersion: () => invoke('get_app_version'),
         minimizeWindow: () => getCurrentWindow().minimize(),
         closeWindow: () => getCurrentWindow().close(),
+        checkYtdlpUpdate: () => wrapErr(invoke('check_ytdlp_update')),
+        downloadYtdlpUpdate: (url) => wrapErr(invoke('download_ytdlp_update', { url })),
 
         onYtOutput: (cb) => {
             if (ytOutputUnlisten) ytOutputUnlisten();
@@ -33,6 +36,10 @@
         onDownloadFinished: (cb) => {
             if (downloadFinishedUnlisten) downloadFinishedUnlisten();
             listen('download-finished', (e) => cb(e.payload)).then(u => { downloadFinishedUnlisten = u; });
+        },
+        onYtdlpUpdateProgress: (cb) => {
+            if (ytdlpUpdateProgressUnlisten) ytdlpUpdateProgressUnlisten();
+            listen('ytdlp-update-progress', (e) => cb(e.payload)).then(u => { ytdlpUpdateProgressUnlisten = u; });
         },
     };
 })();
